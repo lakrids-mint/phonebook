@@ -17,6 +17,11 @@ server.use(cors());
 server.use(bodyParser.json());
 server.use(morgan("tiny"));
 
+/* server.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "*");
+  next();
+}); */
 let persons = [
   {
     name: "Arto Hellas",
@@ -39,6 +44,7 @@ let persons = [
     id: 4
   }
 ];
+
 //generate id
 const generateId = () => {
   const maxId = persons.length > 0 ? Math.max(...persons.map(p => p.id)) : 0;
@@ -95,7 +101,7 @@ server.get("/api/info", (req, res) => {
 server.get("/api/persons", (req, res) => {
   res.json(persons);
 });
-//retun one specific person
+//return one specific person
 server.get("/api/persons/:id", (req, res) => {
   const id = Number(req.params.id);
   const person = persons.find(person => person.id === id);
@@ -119,7 +125,6 @@ server.delete("/api/persons/:id", (req, res) => {
 const unknownEndpoint = (request, response) => {
   response.status(404).send({ error: "unknown endpoint" });
 };
-
 server.use(unknownEndpoint);
 
 const PORT = process.env.PORT || 3001;
