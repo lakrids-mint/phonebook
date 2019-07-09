@@ -1,14 +1,8 @@
-/* TO DEPLOY:
-  - build frontend --prod and copy build to backend dir
-  - server -> commit and push to git
-  - log in to heroku
-  - git push heroku master
-*/
 const express = require("express")
 const server = express()
 require("dotenv").config()
 const bodyParser = require("body-parser")
-//const morgan = require("morgan");
+const morgan = require("morgan")
 
 /* The body-parser functions so that it takes the JSON data of a request, 
 transforms it into a JavaScript object and then attaches it to the body property 
@@ -26,7 +20,7 @@ server.use(bodyParser.json())
 const cors = require("cors")
 server.use(cors())
 
-//server.use(morgan("tiny"));
+server.use(morgan("tiny"))
 
 const requestLogger = (request, response, next) => {
   console.log("Method:", request.method)

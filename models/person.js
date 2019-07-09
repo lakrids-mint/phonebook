@@ -3,7 +3,7 @@ const uniqueValidator = require("mongoose-unique-validator")
 
 // DO NOT SAVE YOUR PASSWORD TO GITHUB!!
 const url = process.env.MONGODB_URI
-console.log("connecting to db...")
+console.log("connecting to ", url)
 
 mongoose
   .connect(url, { useNewUrlParser: true })
