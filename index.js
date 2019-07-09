@@ -1,4 +1,5 @@
 /* TO DEPLOY:
+  - build frontend --prod and copy build to backend dir 
   - server -> commit and push to git
   - log in to heroku
   - git push heroku master
@@ -16,12 +17,12 @@ const server = express();
 server.use(cors());
 server.use(bodyParser.json());
 server.use(morgan("tiny"));
+/* whenever express gets a HTTP GET-request
+ it will first check if the build directory contains a file 
+ corresponding to the requests address. If a correct
+  file is found, express will return it. */
+server.use(express.static("build"));
 
-/* server.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "*");
-  next();
-}); */
 let persons = [
   {
     name: "Arto Hellas",
