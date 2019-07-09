@@ -1,134 +1,141 @@
 /* TO DEPLOY:
-  - build frontend --prod and copy build to backend dir 
+  - build frontend --prod and copy build to backend dir
   - server -> commit and push to git
   - log in to heroku
   - git push heroku master
 */
-const express = require("express");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const morgan = require("morgan");
+const express = require("express")
+const server = express()
+require("dotenv").config()
+const bodyParser = require("body-parser")
+//const morgan = require("morgan");
+
 /* The body-parser functions so that it takes the JSON data of a request, 
 transforms it into a JavaScript object and then attaches it to the body property 
 of the request object before the route handler is called. 
 Without a body-parser, the body property would be undefined.
  */
-const server = express();
-server.use(cors());
-server.use(bodyParser.json());
-server.use(morgan("tiny"));
+const Person = require("./models/person")
 /* whenever express gets a HTTP GET-request
  it will first check if the build directory contains a file 
  corresponding to the requests address. If a correct
   file is found, express will return it. */
-server.use(express.static("build"));
+server.use(express.static("build"))
+server.use(bodyParser.json())
 
-let persons = [
-  {
-    name: "Arto Hellas",
-    number: "040-123456",
-    id: 1
-  },
-  {
-    name: "Ada Lovelace",
-    number: "39-44-5323523",
-    id: 2
-  },
-  {
-    name: "Dan Abramov",
-    number: "12-43-234345",
-    id: 3
-  },
-  {
-    name: "Mary Poppendieck",
-    number: "39-23-6423122",
-    id: 4
-  }
-];
+const cors = require("cors")
+server.use(cors())
 
-//generate id
-const generateId = () => {
-  const maxId = persons.length > 0 ? Math.max(...persons.map(p => p.id)) : 0;
-  return maxId + 1;
+//server.use(morgan("tiny"));
+
+const requestLogger = (request, response, next) => {
+  console.log("Method:", request.method)
+  console.log("Path:  ", request.path)
+  console.log("Body:  ", request.body)
+  console.log("---")
+  next()
 };
-//helper function - checks if names exists
-const isDuplicate = name => {
+
+server.use(requestLogger)
+
+//helper function - checks if name already exists
+/* const isDuplicate = name => {
   for (let i = 0; i < persons.length; i++) {
     if (persons[i].name.toLowerCase() === name.toLowerCase()) {
       return true;
     }
   }
 };
-
-//POST data
-server.post("/api/persons", (req, res) => {
-  const body = req.body;
-  console.log("req.body: ", req.body);
-
-  if (!body.name && body.number) {
-    console.log("Error: !body.name");
-    return res.status(400).json({
-      error: "content missing"
-    });
-  } else if (isDuplicate(body.name)) {
-    console.log("Name is duplicate");
-    return res.status(400).json({
-      error: `${body.name} is already in the phonebook`
-    });
-  } else {
-    console.log("making person object:");
-    let person = {
-      name: body.name,
-      number: body.number,
-      id: generateId()
-    };
-    console.log("person:", person);
-
-    persons = persons.concat(person);
-    res.json(person);
-  }
-});
+ */
 
 //GET root
 server.get("/", (req, res) => {
-  res.send("<h1>Hello from express server!</h1>");
-});
-//Info page
-server.get("/api/info", (req, res) => {
-  res.send(`<p>Phonebook has info for ${persons.length} people</p>
-            <br/><p> ${new Date()}</p>`);
-});
+  console.log("root destination")
+  res.send("<h1>Hello from express server!</h1>")
+})
+
 //Fetch all persons
-server.get("/api/persons", (req, res) => {
-  res.json(persons);
-});
+server.get("/api/people", (req, res) => {
+  Person.find({})
+    .then(people => {
+      console.log("get all people: ")
+      res.json(people.map(person => person.toJSON()))
+    })
+    .catch(error => next(error))
+})
 //return one specific person
-server.get("/api/persons/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const person = persons.find(person => person.id === id);
-  if (person) {
-    res.json(person);
-  } else {
-    res.status(404).end();
+server.get("/api/people/:id", (req, res, next) => {
+  Person.findById(req.params.id)
+    .then(person => {
+      if (person) {
+        res.json(person.toJSON())
+      } else {
+        res.status(404).end()
+      }
+    })
+    .catch(error => {
+      console.log(error)
+      next(error)
+    })
+})
+//POST data
+server.post("/api/people", (req, res, next) => {
+  const body = req.body
+  console.log("req.body: ", req.body)
+  if (!body.name || !body.number) {
+    console.log("Error: !body.name")
+    return res.status(400).json({
+      error: "Name or number missing"
+    })
   }
-});
+  console.log("making person object:")
+  const person = new Person({
+    name: body.name,
+    number: body.number
+  })
+  console.log("person:", person)
+  person
+    .save()
+    .then(savedPerson => savedPerson.toJSON())
+    .then(savedAndFormattedPerson => {
+      res.json(savedAndFormattedPerson)
+    })
+    .catch(error => next(error))
+})
+
 //delete ressource
-server.delete("/api/persons/:id", (req, res) => {
-  const id = Number(req.params.id);
-  console.log(req.params);
-  persons = persons.filter(person => person.id !== id);
-  res.status(204).end();
-});
+server.delete("/api/people/:id", (req, res, next) => {
+  Person.findByIdAndRemove(req.params.id)
+    .then(result => {
+      res.status(204).end()
+    })
+    .catch(error => {
+      console.log(error)
+      next(error)
+    })
+})
 
 /* Middleware functions that are only called if no route handles the HTTP request.
   This one is used for catching requests made to non-existent routes. 
   For these requests, the middleware will return an error message in the JSON format. */
 const unknownEndpoint = (request, response) => {
-  response.status(404).send({ error: "unknown endpoint" });
+  response.status(404).send({ error: "unknown endpoint" })
 };
-server.use(unknownEndpoint);
+server.use(unknownEndpoint)
 
-const PORT = process.env.PORT || 3001;
+// Middleware errorhandling
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message)
+  if (error.name === "CastError" && error.kind == "ObjectId") {
+    return response.status(400).send({ error: "malformatted id" })
+  } else if (error.name === "ValidationError") {
+    return response.status(400).json({ error: error.message })
+  }
+  next(error)
+};
+server.use(errorHandler)
+
+const PORT = process.env.PORT || 3001
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}!`);
-});
+  console.log(`Server running on port ${PORT}!`)
+})
